@@ -1,5 +1,6 @@
 #include <windows.h>
-
+//TODO(diego): this is a global for now
+static bool Running;
 
 LRESULT CALLBACK MainWindowCallback(
   HWND Window,
@@ -15,10 +16,12 @@ LRESULT CALLBACK MainWindowCallback(
             OutputDebugStringA("WM_SIZE\n");
         } break;
         case WM_DESTROY: {
-            OutputDebugStringA("WM_SIZE\n");
+            //TODO(diego): Handle this with a message to the user
+            Running = false;
         } break;
         case WM_CLOSE: {
-            OutputDebugStringA("WM_SIZE\n");
+            //TODO(diego): Handle this with a message to the user
+            Running = false;
         } break;
         case WM_ACTIVATEAPP: {
             OutputDebugStringA("WM_SIZE\n");
@@ -79,7 +82,7 @@ int CALLBACK WinMain(
             0 
         );
         if(WindowHandle) {
-            for(;;) {
+            while(Running) {
                 MSG Message;
                 BOOL MessageResult = GetMessage(&Message,0,0,0);
                 if (MessageResult > 0) {
