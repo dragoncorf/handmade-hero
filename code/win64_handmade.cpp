@@ -82,6 +82,7 @@ int CALLBACK WinMain(
             0 
         );
         if(WindowHandle) {
+            Running = true;
             while(Running) {
                 MSG Message;
                 BOOL MessageResult = GetMessage(&Message,0,0,0);
