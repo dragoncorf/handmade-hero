@@ -6,7 +6,16 @@
 //TODO(diego): this is a global for now
 global_variable bool Running;
 
-LRESULT CALLBACK MainWindowCallback(
+internal void Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height){
+    StretchDIBits(DeviceContext,
+        X, Y, Width, Height, 
+        X, Y, Width, Height,
+        BitmapMemory, 
+        &BitmapInfo, 
+        DIB_RGB_COLORS, SRCCOPY);
+};
+
+LRESULT CALLBACK Win32MainWindowCallback(
   HWND Window,
   UINT Message,
   WPARAM WParam,
@@ -37,15 +46,7 @@ LRESULT CALLBACK MainWindowCallback(
             int Y = Paint.rcPaint.top;
             int Width = Paint.rcPaint.right - Paint.rcPaint.left;
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
-            local_persist DWORD Operation = WHITENESS;
-
-            PatBlt(DeviceContext, X, Y, Width, Height, Operation);
-            if(Operation == WHITENESS) {
-                Operation = BLACKNESS;
-            }
-            else {
-                Operation = WHITENESS;
-            }
+            Win32UpdateWindow(DeviceContext, X, Y, Width, Height);
             EndPaint(Window, &Paint);
         } break;
         default:{
@@ -66,7 +67,7 @@ int CALLBACK WinMain(
     WNDCLASSA WindowClass = {};
 
     WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    WindowClass.lpfnWndProc = MainWindowCallback;
+    WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
     // WindowClass.hIcon
     WindowClass.lpszClassName = "HandmadeHeroWindowClass";
