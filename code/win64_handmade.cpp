@@ -27,7 +27,8 @@ struct win32_offscreen_buffer{
 
 global_variable bool Running;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
-
+global_variable int XOffset = 0;
+global_variable int YOffset = 0;
 
 internal void RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset) {
     uint8 *Row = (uint8 *)Buffer.Memory;
@@ -163,9 +164,6 @@ int CALLBACK WinMain(
         );
         if(Window) {
             Running = true;
-
-            int XOffset = 0;
-            int YOffset = 0;
 
             while(Running) {
                 MSG Message;
