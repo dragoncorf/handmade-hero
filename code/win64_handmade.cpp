@@ -86,8 +86,8 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
 internal void Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight, win32_offscreen_buffer Buffer,
                                          int X, int Y){
     StretchDIBits(DeviceContext, 
-                    0, 0, Buffer.Width, Buffer.Height,
                     0, 0, WindowWidth, WindowHeight,
+                    0, 0, Buffer.Width, Buffer.Height,
                     Buffer.Memory, 
                     &Buffer.Info, 
                     DIB_RGB_COLORS, SRCCOPY);
@@ -104,8 +104,6 @@ LRESULT CALLBACK Win32MainWindowCallback(
 
     switch(Message) {
         case WM_SIZE:{
-            win32_window_dimension WindowDimension = GetWindowDimension(Window);
-            Win32ResizeDIBSection(&GlobalBackBuffer, WindowDimension.Width, WindowDimension.Height);
         } break;
         case WM_DESTROY: {
             //TODO(diego): Handle this with a message to the user
@@ -128,7 +126,7 @@ LRESULT CALLBACK Win32MainWindowCallback(
 
             win32_window_dimension WindowDimension = GetWindowDimension(Window);
 
-            RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
+            // RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
             Win32DisplayBufferInWindow(DeviceContext, WindowDimension.Width, WindowDimension.Height, GlobalBackBuffer, X, Y);
             EndPaint(Window, &Paint);
         } break;
@@ -149,6 +147,7 @@ int CALLBACK WinMain(
 ) {
     WNDCLASSA WindowClass = {};
 
+    Win32ResizeDIBSection(&GlobalBackBuffer, 1200, 720);
     WindowClass.style = CS_HREDRAW | CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
