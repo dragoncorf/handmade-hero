@@ -46,15 +46,17 @@ win32_window_dimension GetWindowDimension(HWND Window) {
 
 internal void RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset) {
     uint8 *Row = (uint8 *)Buffer.Memory;
+    uint8 Red = 0; 
 
     for(int Y=0; Y < Buffer.Height; ++Y){
         uint32 *Pixel = (uint32 *)Row;
 
         for(int X = 0; X < Buffer.Width; ++X) {
-            uint8 Blue = (X + XOffset);
-            uint8 Green = (Y + YOffset);
-            
-            *Pixel++ = ((Green << 8) | Blue);
+            uint32 Blue = (X + Red + XOffset);
+            uint32 Green = (Y + YOffset);
+            Red = X + Y + XOffset + YOffset;
+
+            *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
         }
 
         Row += Buffer.Pitch;
