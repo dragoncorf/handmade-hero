@@ -25,7 +25,7 @@ struct win32_offscreen_buffer{
     int BytesPerPixel;
 };
 
-global_variable bool Running;
+global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 global_variable int XOffset = 0;
 global_variable int YOffset = 0;
@@ -73,6 +73,8 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
 
     Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
     Buffer->Info.bmiHeader.biWidth = Buffer->Width;
+    // When the biHeight field is negative makes windows treat it as top-down,
+    // the first three bytes are in the top left corner instead of bottom-left.
     Buffer->Info.bmiHeader.biHeight = -Buffer->Height;
     Buffer->Info.bmiHeader.biPlanes = 1;
     Buffer->Info.bmiHeader.biBitCount = 32;
@@ -107,11 +109,11 @@ LRESULT CALLBACK Win32MainWindowCallback(
         } break;
         case WM_DESTROY: {
             //TODO(diego): Handle this with a message to the user
-            Running = false;
+            GlobalRunning = false;
         } break;
         case WM_CLOSE: {
             //TODO(diego): Handle this with a message to the user
-            Running = false;
+            GlobalRunning = false;
         } break;
         case WM_ACTIVATEAPP: {
             OutputDebugStringA("ACTIVE\n");
@@ -169,14 +171,13 @@ int CALLBACK WinMain(
             0 
         );
         if(Window) {
-            Running = true;
-
-            while(Running) {
+            GlobalRunning = true;
+            while(GlobalRunning) {
                 MSG Message;
 
                 while(PeekMessage(&Message,0,0,0, PM_REMOVE)) {
                     if(Message.message == WM_QUIT) {
-                        Running = false;
+                        GlobalRunning = false;
                     }
 
                     TranslateMessage(&Message);
@@ -189,8 +190,8 @@ int CALLBACK WinMain(
                 Win32DisplayBufferInWindow(DeviceContext, WindowDimension.Width, WindowDimension.Height, GlobalBackBuffer, 0, 0);
                 ReleaseDC(Window, DeviceContext);
 
-                ++XOffset;
-                YOffset += 2;
+               XOffset++;
+               YOffset++; 
             }
         } else {
 
