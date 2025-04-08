@@ -214,7 +214,7 @@ int CALLBACK WinMain(
     int      ShowCode 
 ) {
     Win32LoadXInput();
-    WNDCLASSA WindowClass = {};
+    WNDCLASSA WindowClassA = {};
 
     Win32ResizeDIBSection(&GlobalBackBuffer, 1200, 720);
     WindowClass.style = CS_HREDRAW | CS_VREDRAW;
