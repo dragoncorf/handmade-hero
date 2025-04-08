@@ -70,14 +70,14 @@ internal win32_window_dimension GetWindowDimension(HWND Window) {
     return Result;
 }
 
-internal void RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, int YOffset) {
-    uint8 *Row = (uint8 *)Buffer.Memory;
+internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset) {
+    uint8 *Row = (uint8 *)Buffer->Memory;
     uint8 Red = 0; 
 
-    for(int Y=0; Y < Buffer.Height; ++Y){
+    for(int Y=0; Y < Buffer->Height; ++Y){
         uint32 *Pixel = (uint32 *)Row;
 
-        for(int X = 0; X < Buffer.Width; ++X) {
+        for(int X = 0; X < Buffer->Width; ++X) {
             uint32 Blue = (X + Red + XOffset);
             uint32 Green = (Y + YOffset);
             Red = X + Y + XOffset + YOffset;
@@ -85,7 +85,7 @@ internal void RenderWeirdGradient(win32_offscreen_buffer Buffer, int XOffset, in
             *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
         }
 
-        Row += Buffer.Pitch;
+        Row += Buffer->Pitch;
     }
 }
 
@@ -113,13 +113,13 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
     Buffer->Pitch = Buffer->Width*Buffer->BytesPerPixel;
 }
 
-internal void Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight, 
-                                            win32_offscreen_buffer Buffer){
+internal void Win32DisplayBufferInWindow( win32_offscreen_buffer *Buffer, HDC DeviceContext, 
+                                            int WindowWidth, int WindowHeight) { 
     StretchDIBits(DeviceContext, 
                     0, 0, WindowWidth, WindowHeight,
-                    0, 0, Buffer.Width, Buffer.Height,
-                    Buffer.Memory, 
-                    &Buffer.Info, 
+                    0, 0, Buffer->Width, Buffer->Height,
+                    Buffer->Memory, 
+                    &Buffer->Info, 
                     DIB_RGB_COLORS, SRCCOPY);
 };
 
@@ -195,7 +195,7 @@ LRESULT CALLBACK Win32MainWindowCallback(
             win32_window_dimension WindowDimension = GetWindowDimension(Window);
 
             // RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
-            Win32DisplayBufferInWindow(DeviceContext, WindowDimension.Width, WindowDimension.Height, GlobalBackBuffer);
+            Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
             EndPaint(Window, &Paint);
         } break;
         default:{
@@ -214,18 +214,18 @@ int CALLBACK WinMain(
     int      ShowCode 
 ) {
     Win32LoadXInput();
-    WNDCLASSA WindowClassA = {};
+    WNDCLASSA WndowClassA = {};
 
     Win32ResizeDIBSection(&GlobalBackBuffer, 1200, 720);
-    WindowClass.style = CS_HREDRAW | CS_VREDRAW;
-    WindowClass.lpfnWndProc = Win32MainWindowCallback;
-    WindowClass.hInstance = Instance;
-    // WindowClass.hIcon
-    WindowClass.lpszClassName = "HandmadeHeroWindowClass";
-    if(RegisterClassA(&WindowClass)) {
+    WndowClassA.style = CS_HREDRAW | CS_VREDRAW;
+    WndowClassA.lpfnWndProc = Win32MainWindowCallback;
+    WndowClassA.hInstance = Instance;
+    // WndowClassA.hIcon
+    WndowClassA.lpszClassName = "HandmadeHeroWindowClass";
+    if(RegisterClassA(&WndowClassA)) {
         HWND Window = CreateWindowExA(
             0,
-            WindowClass.lpszClassName, 
+            WndowClassA.lpszClassName, 
             "HandMade Hero",
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,
             CW_USEDEFAULT,
@@ -295,11 +295,11 @@ int CALLBACK WinMain(
                 Vibration.wLeftMotorSpeed = 60000;
                 Vibration.wRightMotorSpeed = 60000;
                 XInputSetState(0, &Vibration);
-                RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
+                RenderWeirdGradient(&GlobalBackBuffer, XOffset, YOffset);
                 
                 HDC DeviceContext = GetDC(Window);
                 win32_window_dimension WindowDimension = GetWindowDimension(Window);
-                Win32DisplayBufferInWindow(DeviceContext, WindowDimension.Width, WindowDimension.Height, GlobalBackBuffer);
+                Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
                 ReleaseDC(Window, DeviceContext);
 
                 //XOffset++;
