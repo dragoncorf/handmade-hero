@@ -54,7 +54,7 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 internal void Win32LoadXInput(void) {
-    HMODULE XInputLibrary = LoadLibrary("xinput1_3.dll");
+    HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
     if(XInputLibrary) {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
         XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
@@ -146,6 +146,44 @@ LRESULT CALLBACK Win32MainWindowCallback(
         case WM_ACTIVATEAPP: {
             OutputDebugStringA("ACTIVE\n");
         } break;
+
+        case WM_SYSKEYUP:
+        case WM_SYSKEYDOWN:
+        case WM_KEYDOWN:
+        case WM_KEYUP: {
+            uint32 VKCode = WParam;
+            bool WasDown = ((LParam & (1 << 30)) != 0);
+            bool IsDown = ((LParam & (1 << 31)) == 0);
+            if (WasDown != IsDown) {
+                if (VKCode == 'W') {
+                    OutputDebugStringA("W");
+                } else if (VKCode == 'A') {
+                    OutputDebugStringA("A");
+                } else if (VKCode == 'S') {
+                    OutputDebugStringA("S");
+                } else if (VKCode == 'D') {
+                    OutputDebugStringA("D");
+                } else if (VKCode == 'Q') {
+                    OutputDebugStringA("Q");
+                } else if (VKCode == 'E') {
+                    OutputDebugStringA("E");
+                } else if (VKCode == VK_UP) {
+                } else if (VKCode == VK_DOWN) {
+                } else if (VKCode == VK_LEFT) {
+                } else if (VKCode == VK_RIGHT) {
+                } else if (VKCode == VK_ESCAPE) {
+                    if (IsDown) {
+                        OutputDebugStringA("isDown");
+                    }
+                    if (WasDown) {
+                        OutputDebugStringA("WasDown");
+                    }
+                    OutputDebugStringA("\n");
+                } else if (VKCode == VK_SPACE) {
+                }
+            }
+        } break;
+
         case WM_PAINT: {
             PAINTSTRUCT Paint;
             HDC DeviceContext = BeginPaint(Window, &Paint);
@@ -253,7 +291,10 @@ int CALLBACK WinMain(
                         //The controller is not available
                     }
                 }
-
+                XINPUT_VIBRATION Vibration;
+                Vibration.wLeftMotorSpeed = 60000;
+                Vibration.wRightMotorSpeed = 60000;
+                XInputSetState(0, &Vibration);
                 RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
                 
                 HDC DeviceContext = GetDC(Window);
