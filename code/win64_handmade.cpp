@@ -175,6 +175,7 @@ int CALLBACK WinMain(
     LPSTR     CommandLine,
     int      ShowCode 
 ) {
+    Win32LoadXInput();
     WNDCLASSA WindowClass = {};
 
     Win32ResizeDIBSection(&GlobalBackBuffer, 1200, 720);
@@ -217,7 +218,7 @@ int CALLBACK WinMain(
                         //Controller is plugged in
                         XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
 
-                        bool Up= (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                        bool Up = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
                         bool Down = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
                         bool Left = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
                         bool Right = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
@@ -232,6 +233,22 @@ int CALLBACK WinMain(
 
                         int16 StickX = Pad->sThumbLX;
                         int16 StickY = Pad->sThumbLY;
+
+                        if (Up) {
+                            YOffset++;
+                        }
+                        if (Down) {
+                            YOffset--;
+                        }
+                        if (Left) {
+                            XOffset--;
+                        }
+                        if (Right) {
+                            XOffset++;
+                        }
+                        if(AButton) {
+                            XOffset += 2;
+                        }
                     } else {
                         //The controller is not available
                     }
@@ -244,8 +261,7 @@ int CALLBACK WinMain(
                 Win32DisplayBufferInWindow(DeviceContext, WindowDimension.Width, WindowDimension.Height, GlobalBackBuffer);
                 ReleaseDC(Window, DeviceContext);
 
-               XOffset++;
-               YOffset++; 
+                //XOffset++;
             }
         } else {
 
