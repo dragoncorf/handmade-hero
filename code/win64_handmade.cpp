@@ -11,6 +11,7 @@ typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
+typedef int32 bool32;
 
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -40,7 +41,7 @@ struct win32_window_dimension {
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub) {
-    return 0;
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
@@ -48,13 +49,16 @@ global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub) {
-    return 0;
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 internal void Win32LoadXInput(void) {
-    HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
+    if (!XInputLibrary) {
+        HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    }
     if(XInputLibrary) {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary, "XInputGetState");
         XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary, "XInputSetState");
@@ -152,8 +156,8 @@ LRESULT CALLBACK Win32MainWindowCallback(
         case WM_KEYDOWN:
         case WM_KEYUP: {
             uint32 VKCode = WParam;
-            bool WasDown = ((LParam & (1 << 30)) != 0);
-            bool IsDown = ((LParam & (1 << 31)) == 0);
+            bool32 WasDown = LParam & (1 << 30);
+            bool32 IsDown = LParam & (1 << 31);
             if (WasDown != IsDown) {
                 if (VKCode == 'W') {
                     OutputDebugStringA("W");
@@ -181,6 +185,10 @@ LRESULT CALLBACK Win32MainWindowCallback(
                     OutputDebugStringA("\n");
                 } else if (VKCode == VK_SPACE) {
                 }
+            }
+            bool32 AltKeyWasDown = (LParam & (1 << 29));
+            if ((VKCode == VK_F4) && AltKeyWasDown) {
+                GlobalRunning = false;
             }
         } break;
 
