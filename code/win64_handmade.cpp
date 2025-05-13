@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
+#include <dsound.h>
 
 #define internal static 
 #define local_persist static 
@@ -65,6 +66,62 @@ internal void Win32LoadXInput(void) {
     }
 }
 
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuiDevice, LPDIRECTSOUND *ppDS, _Pre_null_ LPUNKNOWN pUnkOuter);
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+internal void Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize) {
+    // Load the library
+    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+
+    if(DSoundLibrary) {
+        direct_sound_create *DirectSoundCreate = (direct_sound_create *)GetProcAddress(DSoundLibrary,"DirectSoundCreate");
+       
+        LPDIRECTSOUND DirectSound;
+        if (DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0))) {
+            WAVEFORMATEX WaveFormat = {};
+            WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
+            WaveFormat.nChannels = 2;
+            WaveFormat.nSamplesPerSec = SamplesPerSecond;
+            WaveFormat.wBitsPerSample = 16;
+            WaveFormat.nBlockAlign = WaveFormat.nChannels*WaveFormat.wBitsPerSample / 8;
+            WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
+            WaveFormat.cbSize = 0;
+            if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY))) {
+                DSBUFFERDESC BufferDescription = {};
+                BufferDescription.dwSize = sizeof(BufferDescription);
+                BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                LPDIRECTSOUNDBUFFER PrimaryBuffer;
+                if (SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0))) {
+                    HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat);
+                    if (SUCCEEDED(Error)) {
+                        OutputDebugStringA("Primary buffer format was set. \n");
+                    } else {
+
+                    }
+                } else {
+
+                }
+            } else {
+
+            }
+            DSBUFFERDESC BufferDescription = {};
+            BufferDescription.dwSize = sizeof(BufferDescription);
+            BufferDescription.dwFlags = 0;
+            BufferDescription.dwBufferBytes = BufferSize;
+            BufferDescription.lpwfxFormat = &WaveFormat;
+            LPDIRECTSOUNDBUFFER SecondaryBuffer;
+            if (SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0))) {
+                OutputDebugStringA("Secondary buffer format was set. \n");
+            }
+            BufferDescription.dwBufferBytes = BufferSize;
+        } else {
+
+        }
+        
+    }
+}
+
+
 internal win32_window_dimension GetWindowDimension(HWND Window) {
     win32_window_dimension Result;
     RECT ClientRect;
@@ -113,7 +170,7 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
     Buffer->Info.bmiHeader.biCompression = BI_RGB;
     
     int BitmapMemorySize = (Buffer->Width*Buffer->Height)*Buffer->BytesPerPixel;
-    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Buffer->Width*Buffer->BytesPerPixel;
 }
 
@@ -246,6 +303,7 @@ int CALLBACK WinMain(
             0 
         );
         if(Window) {
+            Win32InitSound(Window, 48000, 48000*sizeof(int16)*2);
             GlobalRunning = true;
             while(GlobalRunning) {
                 MSG Message;
@@ -281,10 +339,10 @@ int CALLBACK WinMain(
                         int16 StickY = Pad->sThumbLY;
 
                         if (Up) {
-                            YOffset++;
+                            YOffset--;
                         }
                         if (Down) {
-                            YOffset--;
+                            YOffset++;
                         }
                         if (Left) {
                             XOffset--;
@@ -295,13 +353,16 @@ int CALLBACK WinMain(
                         if(AButton) {
                             XOffset += 2;
                         }
+
+                        XOffset -= StickX >> 12;
+                        YOffset -= StickY >> 12;
                     } else {
                         //The controller is not available
                     }
                 }
                 XINPUT_VIBRATION Vibration;
-                Vibration.wLeftMotorSpeed = 60000;
-                Vibration.wRightMotorSpeed = 60000;
+                Vibration.wLeftMotorSpeed = 0;
+                Vibration.wRightMotorSpeed = 0;
                 XInputSetState(0, &Vibration);
                 RenderWeirdGradient(&GlobalBackBuffer, XOffset, YOffset);
                 
@@ -310,7 +371,6 @@ int CALLBACK WinMain(
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
                 ReleaseDC(Window, DeviceContext);
 
-                //XOffset++;
             }
         } else {
 
