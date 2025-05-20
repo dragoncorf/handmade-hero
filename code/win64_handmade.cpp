@@ -30,6 +30,7 @@ struct win32_offscreen_buffer{
 
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackBuffer;
+global_variable LPDIRECTSOUNDBUFFER GlobalSecondaryBuffer;
 global_variable int XOffset = 0;
 global_variable int YOffset = 0;
 
@@ -109,8 +110,8 @@ internal void Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSi
             BufferDescription.dwFlags = 0;
             BufferDescription.dwBufferBytes = BufferSize;
             BufferDescription.lpwfxFormat = &WaveFormat;
-            LPDIRECTSOUNDBUFFER SecondaryBuffer;
-            if (SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0))) {
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &GlobalSecondaryBuffer, 0);
+            if (SUCCEEDED(Error)) {
                 OutputDebugStringA("Secondary buffer format was set. \n");
             }
             BufferDescription.dwBufferBytes = BufferSize;
@@ -139,7 +140,7 @@ internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, i
         uint32 *Pixel = (uint32 *)Row;
 
         for(int X = 0; X < Buffer->Width; ++X) {
-            uint32 Blue = (X + Red + XOffset);
+            uint32 Blue = (X + XOffset);
             uint32 Green = (Y + YOffset);
             Red = X + Y + XOffset + YOffset;
 
@@ -303,7 +304,12 @@ int CALLBACK WinMain(
             0 
         );
         if(Window) {
-            Win32InitSound(Window, 48000, 48000*sizeof(int16)*2);
+            int SamplesPerSecond = 48000;
+            int Hz = 256;
+            int SquareWaveCounter = 0;
+            int SquareWavePeriod = SamplesPerSecond/Hz;
+            int BytesPerSample = sizeof(int16)*2; 
+            Win32InitSound(Window, SamplesPerSecond, SamplesPerSecond*BytesPerSample);
             GlobalRunning = true;
             while(GlobalRunning) {
                 MSG Message;
@@ -354,16 +360,16 @@ int CALLBACK WinMain(
                             XOffset += 2;
                         }
 
-                        XOffset -= StickX >> 12;
+                        XOffset += StickX >> 12;
                         YOffset -= StickY >> 12;
                     } else {
                         //The controller is not available
                     }
                 }
-                XINPUT_VIBRATION Vibration;
-                Vibration.wLeftMotorSpeed = 0;
-                Vibration.wRightMotorSpeed = 0;
-                XInputSetState(0, &Vibration);
+                // XINPUT_VIBRATION Vibration;
+                // Vibration.wLeftMotorSpeed = 0;
+                // Vibration.wRightMotorSpeed = 0;
+                // XInputSetState(0, &Vibration);
                 RenderWeirdGradient(&GlobalBackBuffer, XOffset, YOffset);
                 
                 HDC DeviceContext = GetDC(Window);
@@ -371,6 +377,42 @@ int CALLBACK WinMain(
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
                 ReleaseDC(Window, DeviceContext);
 
+                DWORD PlayCursor;
+                DWORD WriteCursor;
+                if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor,&WriteCursor))) {
+                    DWORD WritePointer = ;
+                    DWORD BytesToWrite = ;
+
+                    VOID *Region1;
+                    DWORD Region1Size;
+                    VOID *Region2;
+                    DWORD Region2Size;
+                    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(WritePointer, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0))) {
+                        // TODO: Assert
+                        int16 *SampleOut = (int16 *)Region1;
+                        DWORD Regions1SampleCount = Region1Size/BytesPerSample;
+                        DWORD Regions2SampleCount = Region2Size/BytesPerSample;
+                        for(DWORD SampleIndex = 0; SampleIndex < Regions1SampleCount; ++SampleIndex) {
+                            if(SquareWaveCounter = 0) {
+                                SquareWaveCounter = SquareWavePeriod;
+                            }
+                            int16 SampleValue = (SquareWaveCounter > (SquareWavePeriod/2)) ? 16000 : -16000;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                            --SquareWaveCounter;
+                        }
+                        
+                        for(DWORD SampleIndex = 0; SampleIndex < Region2Size; ++SampleIndex) {
+                            if(SquareWaveCounter = 0) {
+                                SquareWaveCounter = SquareWavePeriod;
+                            }
+                            int16 SampleValue = (SquareWaveCounter > (SquareWavePeriod/2)) ? 16000 : -16000;
+                            *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+                            --SquareWaveCounter;
+                        }
+                    }
+                }
             }
         } else {
 
