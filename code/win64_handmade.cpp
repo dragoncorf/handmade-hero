@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 
@@ -305,12 +306,21 @@ int CALLBACK WinMain(
         );
         if(Window) {
             int SamplesPerSecond = 48000;
-            int Hz = 256;
-            int SquareWaveCounter = 0;
-            int SquareWavePeriod = SamplesPerSecond/Hz;
+            int ToneHz = 220;
+            int16 ToneVolume = 1500;
+            uint32 RunningSampleIndex = 0;
+            int SquareWavePeriod = SamplesPerSecond/ToneHz;
+            int HalfSquareWavePeriod = SquareWavePeriod/2;
             int BytesPerSample = sizeof(int16)*2; 
-            Win32InitSound(Window, SamplesPerSecond, SamplesPerSecond*BytesPerSample);
+            int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
+            int32 LatencySampleCount = SamplesPerSecond / 15; // ~66ms of latency
+
+            
+            Win32InitSound(Window, SamplesPerSecond, SecondaryBufferSize);
+            bool32 SoundIsPlaying = false;
+            
             GlobalRunning = true;
+
             while(GlobalRunning) {
                 MSG Message;
 
@@ -366,53 +376,67 @@ int CALLBACK WinMain(
                         //The controller is not available
                     }
                 }
+
                 // XINPUT_VIBRATION Vibration;
                 // Vibration.wLeftMotorSpeed = 0;
                 // Vibration.wRightMotorSpeed = 0;
                 // XInputSetState(0, &Vibration);
+
                 RenderWeirdGradient(&GlobalBackBuffer, XOffset, YOffset);
                 
-                HDC DeviceContext = GetDC(Window);
-                win32_window_dimension WindowDimension = GetWindowDimension(Window);
-                Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
-                ReleaseDC(Window, DeviceContext);
-
                 DWORD PlayCursor;
                 DWORD WriteCursor;
                 if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor,&WriteCursor))) {
-                    DWORD WritePointer = ;
-                    DWORD BytesToWrite = ;
+                    DWORD BytesToLock = (RunningSampleIndex * BytesPerSample) % SecondaryBufferSize;
+                    DWORD TargetCursor = (PlayCursor + LatencySampleCount * BytesPerSample) % SecondaryBufferSize;
+                    DWORD BytesToWrite;
+
+                    if (BytesToLock > TargetCursor) {
+                        BytesToWrite = (SecondaryBufferSize - BytesToLock) + TargetCursor;
+                    } else {
+                        BytesToWrite = TargetCursor - BytesToLock;
+                    }
 
                     VOID *Region1;
                     DWORD Region1Size;
                     VOID *Region2;
                     DWORD Region2Size;
-                    if(SUCCEEDED(GlobalSecondaryBuffer->Lock(WritePointer, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0))) {
+                    HRESULT Error = GlobalSecondaryBuffer->Lock(BytesToLock, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0);
+                    if(SUCCEEDED(Error)) {
                         // TODO: Assert
-                        int16 *SampleOut = (int16 *)Region1;
                         DWORD Regions1SampleCount = Region1Size/BytesPerSample;
-                        DWORD Regions2SampleCount = Region2Size/BytesPerSample;
+                        int16 *SampleOut = (int16 *)Region1;
                         for(DWORD SampleIndex = 0; SampleIndex < Regions1SampleCount; ++SampleIndex) {
-                            if(SquareWaveCounter = 0) {
-                                SquareWaveCounter = SquareWavePeriod;
-                            }
-                            int16 SampleValue = (SquareWaveCounter > (SquareWavePeriod/2)) ? 16000 : -16000;
+                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
-                            --SquareWaveCounter;
                         }
                         
-                        for(DWORD SampleIndex = 0; SampleIndex < Region2Size; ++SampleIndex) {
-                            if(SquareWaveCounter = 0) {
-                                SquareWaveCounter = SquareWavePeriod;
-                            }
-                            int16 SampleValue = (SquareWaveCounter > (SquareWavePeriod/2)) ? 16000 : -16000;
+                        DWORD Regions2SampleCount = Region2Size/BytesPerSample;
+                        SampleOut = (int16 *)Region2;
+                        for(DWORD SampleIndex = 0; SampleIndex < Regions2SampleCount; ++SampleIndex) {
+                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
-                            --SquareWaveCounter;
                         }
+                        char DebugString[256];
+                        sprintf(DebugString, "BytesToLock: %u, PlayCursor: %u, BytesToWrite: %u\n",
+                                BytesToLock, PlayCursor, BytesToWrite);
+                        OutputDebugStringA(DebugString);
+
+                        GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
                     }
                 }
+                if (!SoundIsPlaying) {
+                    HRESULT Error = GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+                    SoundIsPlaying = true;
+                }
+
+                HDC DeviceContext = GetDC(Window);
+                win32_window_dimension WindowDimension = GetWindowDimension(Window);
+                Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
+                ReleaseDC(Window, DeviceContext);
+
             }
         } else {
 
