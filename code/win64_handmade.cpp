@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 
@@ -419,10 +418,6 @@ int CALLBACK WinMain(
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
                         }
-                        char DebugString[256];
-                        sprintf(DebugString, "BytesToLock: %u, PlayCursor: %u, BytesToWrite: %u\n",
-                                BytesToLock, PlayCursor, BytesToWrite);
-                        OutputDebugStringA(DebugString);
 
                         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
                     }
