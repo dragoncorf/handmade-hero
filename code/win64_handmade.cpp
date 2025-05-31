@@ -2,11 +2,12 @@
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <math.h>
 
 #define internal static 
 #define local_persist static 
 #define global_variable static 
-//TODO(diego): this is a global for now
+#define Pi32 3.1415926535f
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -18,6 +19,9 @@ typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
+
+typedef float real32;
+typedef double real64;
 
 struct win32_offscreen_buffer{
     BITMAPINFO Info;
@@ -121,7 +125,6 @@ internal void Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSi
         
     }
 }
-
 
 internal win32_window_dimension GetWindowDimension(HWND Window) {
     win32_window_dimension Result;
@@ -308,8 +311,7 @@ int CALLBACK WinMain(
             int ToneHz = 220;
             int16 ToneVolume = 1500;
             uint32 RunningSampleIndex = 0;
-            int SquareWavePeriod = SamplesPerSecond/ToneHz;
-            int HalfSquareWavePeriod = SquareWavePeriod/2;
+            int WavePeriod = SamplesPerSecond/ToneHz;
             int BytesPerSample = sizeof(int16)*2; 
             int SecondaryBufferSize = SamplesPerSecond * BytesPerSample;
             int32 LatencySampleCount = SamplesPerSecond / 15; // ~66ms of latency
@@ -385,7 +387,8 @@ int CALLBACK WinMain(
                 
                 DWORD PlayCursor;
                 DWORD WriteCursor;
-                if (SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor,&WriteCursor))) {
+                if (!SoundIsPlaying &&
+                        SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor,&WriteCursor))) {
                     DWORD BytesToLock = (RunningSampleIndex * BytesPerSample) % SecondaryBufferSize;
                     DWORD TargetCursor = (PlayCursor + LatencySampleCount * BytesPerSample) % SecondaryBufferSize;
                     DWORD BytesToWrite;
@@ -402,21 +405,29 @@ int CALLBACK WinMain(
                     DWORD Region2Size;
                     HRESULT Error = GlobalSecondaryBuffer->Lock(BytesToLock, BytesToWrite, &Region1, &Region1Size, &Region2, &Region2Size, 0);
                     if(SUCCEEDED(Error)) {
-                        // TODO: Assert
+                        // TODO: Asserts
                         DWORD Regions1SampleCount = Region1Size/BytesPerSample;
                         int16 *SampleOut = (int16 *)Region1;
                         for(DWORD SampleIndex = 0; SampleIndex < Regions1SampleCount; ++SampleIndex) {
-                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            real32 t = 2.0f * Pi32 * ((real32)RunningSampleIndex / (real32)WavePeriod);
+                            real32 SineValue = sin(t);
+                            int16 SampleValue = (int16)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+
+                            ++RunningSampleIndex;
                         }
                         
                         DWORD Regions2SampleCount = Region2Size/BytesPerSample;
                         SampleOut = (int16 *)Region2;
                         for(DWORD SampleIndex = 0; SampleIndex < Regions2SampleCount; ++SampleIndex) {
-                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            real32 t = 2.0f * Pi32 * (real32)RunningSampleIndex / (real32)WavePeriod;
+                            real32 SineValue = sin(t);
+                            int16 SampleValue = (int16)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+                            
+                            ++RunningSampleIndex;
                         }
 
                         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
