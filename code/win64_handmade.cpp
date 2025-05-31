@@ -281,18 +281,18 @@ int CALLBACK WinMain(
     int      ShowCode 
 ) {
     Win32LoadXInput();
-    WNDCLASSA WndowClassA = {};
+    WNDCLASSA WindowClassA = {};
 
     Win32ResizeDIBSection(&GlobalBackBuffer, 1200, 720);
-    WndowClassA.style = CS_HREDRAW | CS_VREDRAW;
-    WndowClassA.lpfnWndProc = Win32MainWindowCallback;
-    WndowClassA.hInstance = Instance;
-    // WndowClassA.hIcon
-    WndowClassA.lpszClassName = "HandmadeHeroWindowClass";
-    if(RegisterClassA(&WndowClassA)) {
+    WindowClassA.style = CS_HREDRAW | CS_VREDRAW;
+    WindowClassA.lpfnWndProc = Win32MainWindowCallback;
+    WindowClassA.hInstance = Instance;
+    // WindowClassA.hIcon
+    WindowClassA.lpszClassName = "HandmadeHeroWindowClass";
+    if(RegisterClassA(&WindowClassA)) {
         HWND Window = CreateWindowExA(
             0,
-            WndowClassA.lpszClassName, 
+            WindowClassA.lpszClassName, 
             "HandMade Hero",
             WS_OVERLAPPEDWINDOW|WS_VISIBLE,
             CW_USEDEFAULT,
