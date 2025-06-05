@@ -145,7 +145,7 @@ internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, i
         for(int X = 0; X < Buffer->Width; ++X) {
             uint32 Blue = (X + XOffset);
             uint32 Green = (Y + YOffset);
-            Red = X + Y + XOffset + YOffset;
+            Red = X + YOffset;
 
             *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
         }
@@ -284,6 +284,7 @@ struct win32_sound_output {
     int WavePeriod;
     int BytesPerSample; 
     int SecondaryBufferSize;
+    real32 tSine;
 };
 
 void Win32FillSoundBuffer (win32_sound_output *SoundOutput, DWORD BytesToLock, DWORD BytesToWrite) {
@@ -299,12 +300,12 @@ void Win32FillSoundBuffer (win32_sound_output *SoundOutput, DWORD BytesToLock, D
         int16 *SampleOut = (int16 *)Region1;
         for (DWORD SampleIndex = 0; SampleIndex < Regions1SampleCount; ++SampleIndex)
         {
-            real32 t = 2.0f * Pi32 * ((real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod);
-            real32 SineValue = sin(t);
+            real32 SineValue = sin(SoundOutput->tSine);
             int16 SampleValue = (int16)(SineValue * SoundOutput->ToneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
-
+            
+            SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
             ++SoundOutput->RunningSampleIndex;
         }
 
@@ -312,12 +313,12 @@ void Win32FillSoundBuffer (win32_sound_output *SoundOutput, DWORD BytesToLock, D
         SampleOut = (int16 *)Region2;
         for (DWORD SampleIndex = 0; SampleIndex < Regions2SampleCount; ++SampleIndex)
         {
-            real32 t = 2.0f * Pi32 * (real32)SoundOutput->RunningSampleIndex / (real32)SoundOutput->WavePeriod;
-            real32 SineValue = sin(t);
+            real32 SineValue = sin(SoundOutput->tSine);
             int16 SampleValue = (int16)(SineValue * SoundOutput->ToneVolume);
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
-
+            
+            SoundOutput->tSine = 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
             ++SoundOutput->RunningSampleIndex;
         }
 
@@ -358,7 +359,7 @@ int CALLBACK WinMain(
         if(Window) {
             win32_sound_output SoundOutput = {};
             SoundOutput.SamplesPerSecond = 48000;
-            SoundOutput.ToneHz = 220;
+            SoundOutput.ToneHz = 256;
             SoundOutput.ToneVolume = 1500;
             SoundOutput.RunningSampleIndex = 0;
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
@@ -416,12 +417,14 @@ int CALLBACK WinMain(
                         if (Right) {
                             XOffset++;
                         }
-                        if(AButton) {
-                            XOffset += 2;
-                        }
 
                         XOffset += StickX >> 12;
                         YOffset -= StickY >> 12;
+
+                        SoundOutput.ToneHz = 512 + (int)((real32)StickY / 3000.0f);
+                        SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
+                        if (AButton) {
+                        }
                     } else {
                         //The controller is not available
                     }
@@ -440,10 +443,7 @@ int CALLBACK WinMain(
                     DWORD BytesToLock = (SoundOutput.RunningSampleIndex * SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
                     DWORD BytesToWrite;
 
-                    if (BytesToLock == PlayCursor) {
-                        BytesToWrite = 0; 
-                    }
-                    else if (BytesToLock > PlayCursor) {
+                    if (BytesToLock > PlayCursor) {
                         BytesToWrite = (SoundOutput.SecondaryBufferSize - BytesToLock);
                         BytesToWrite += PlayCursor;
                     }
