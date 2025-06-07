@@ -63,6 +63,9 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 internal void Win32LoadXInput(void) {
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
     if (!XInputLibrary) {
+        HMODULE XInputLibrary = LoadLibraryA("xinput9_1_0.dll");
+    }
+    if (!XInputLibrary) {
         HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
     if(XInputLibrary) {
@@ -145,7 +148,7 @@ internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, i
         for(int X = 0; X < Buffer->Width; ++X) {
             uint32 Blue = (X + XOffset);
             uint32 Green = (Y + YOffset);
-            Red = X + YOffset;
+            Red = (X + YOffset);
 
             *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
         }
@@ -420,8 +423,8 @@ int CALLBACK WinMain(
                             XOffset++;
                         }
 
-                        XOffset += StickX >> 12;
-                        YOffset -= StickY >> 12;
+                        XOffset += StickX / 4096;
+                        YOffset -= StickY / 4096;
 
                         SoundOutput.ToneHz = 512 + (int)(256.0f*((real32)StickY / 30000.0f));
                         SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
