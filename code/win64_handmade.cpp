@@ -9,6 +9,7 @@
 #define local_persist static 
 #define global_variable static 
 #define Pi32 3.1415926535f
+#define WrapColor(Value) ((uint8)(((Value) % 256 + 256) % 256))
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -141,16 +142,20 @@ internal win32_window_dimension GetWindowDimension(HWND Window) {
 
 internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset) {
     uint8 *Row = (uint8 *)Buffer->Memory;
-    uint32 Red = 0; 
     
     for(int Y=0; Y < Buffer->Height; ++Y){
         uint32 *Pixel = (uint32 *)Row;
         
         for(int X = 0; X < Buffer->Width; ++X) {
-            uint32 Blue = (X + XOffset);
-            uint32 Green = (Y + YOffset);
-            Red = (X + YOffset);
-            *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
+            int Blue = (X + XOffset);
+            int Green = (Y + YOffset);
+            int Red = (X + YOffset);
+
+            uint8 FinalBlue = WrapColor(Blue);
+            uint8 FinalGreen = WrapColor(Green);
+            uint8 FinalRed = WrapColor(Red);
+
+            *Pixel++ = (FinalRed << 16) | (FinalGreen << 8) | FinalBlue;
         }
 
         Row += Buffer->Pitch;
