@@ -3,6 +3,7 @@
 #include <xinput.h>
 #include <dsound.h>
 #include <math.h>
+#include <stdio.h>
 
 #define internal static 
 #define local_persist static 
@@ -140,16 +141,15 @@ internal win32_window_dimension GetWindowDimension(HWND Window) {
 
 internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset) {
     uint8 *Row = (uint8 *)Buffer->Memory;
-    uint8 Red = 0; 
-
+    uint32 Red = 0; 
+    
     for(int Y=0; Y < Buffer->Height; ++Y){
         uint32 *Pixel = (uint32 *)Row;
-
+        
         for(int X = 0; X < Buffer->Width; ++X) {
             uint32 Blue = (X + XOffset);
             uint32 Green = (Y + YOffset);
             Red = (X + YOffset);
-
             *Pixel++ = ((Red << 16) | (Green << 8) | Blue);
         }
 
@@ -272,7 +272,7 @@ LRESULT CALLBACK Win32MainWindowCallback(
         } break;
         default:{
             // OutputDebugStringA("default\n");
-            Result = DefWindowProc(Window, Message, WParam, LParam);
+            Result = DefWindowProcA(Window, Message, WParam, LParam);
         } break;
     }
 
@@ -322,7 +322,7 @@ void Win32FillSoundBuffer (win32_sound_output *SoundOutput, DWORD BytesToLock, D
             *SampleOut++ = SampleValue;
             *SampleOut++ = SampleValue;
             
-            SoundOutput->tSine = 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
+            SoundOutput->tSine += 2.0f * Pi32 * 1.0f / (real32)SoundOutput->WavePeriod;
             ++SoundOutput->RunningSampleIndex;
         }
 
@@ -425,6 +425,13 @@ int CALLBACK WinMain(
 
                         XOffset += StickX / 4096;
                         YOffset -= StickY / 4096;
+
+                        char buffer[128];
+                        char buffer2[128];
+                        sprintf(buffer, "Value X: %d\n", XOffset);
+                        sprintf(buffer2, "Value Y: %d\n", YOffset);
+                        OutputDebugStringA(buffer);
+                        OutputDebugStringA(buffer2);
 
                         SoundOutput.ToneHz = 512 + (int)(256.0f*((real32)StickY / 30000.0f));
                         SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
