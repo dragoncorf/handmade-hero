@@ -341,6 +341,10 @@ int CALLBACK WinMain(
     LPSTR     CommandLine,
     int      ShowCode 
 ) {
+    LARGE_INTEGER PerfCountFrequencyResult;
+    QueryPerformanceFrequency(&PerfCountFrequencyResult);
+    int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+
     Win32LoadXInput();
     WNDCLASSA WindowClassA = {};
 
@@ -350,6 +354,7 @@ int CALLBACK WinMain(
     WindowClassA.hInstance = Instance;
     // WindowClassA.hIcon
     WindowClassA.lpszClassName = "HandmadeHeroWindowClass";
+
     if(RegisterClassA(&WindowClassA)) {
         HWND Window = CreateWindowExA(
             0,
@@ -368,7 +373,7 @@ int CALLBACK WinMain(
         if(Window) {
             win32_sound_output SoundOutput = {};
             SoundOutput.SamplesPerSecond = 48000;
-            SoundOutput.ToneHz = 256;
+            SoundOutput.ToneHz = 440;
             SoundOutput.ToneVolume = 1500;
             SoundOutput.RunningSampleIndex = 0;
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
@@ -381,6 +386,11 @@ int CALLBACK WinMain(
             GlobalSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
 
             GlobalRunning = true;
+
+            LARGE_INTEGER LastCounter;
+            QueryPerformanceCounter(&LastCounter);
+
+            int64 LastCycleCount = __rdtsc();
 
             while(GlobalRunning) {
                 MSG Message;
@@ -431,13 +441,6 @@ int CALLBACK WinMain(
                         XOffset += StickX / 4096;
                         YOffset -= StickY / 4096;
 
-                        char buffer[128];
-                        char buffer2[128];
-                        sprintf(buffer, "Value X: %d\n", XOffset);
-                        sprintf(buffer2, "Value Y: %d\n", YOffset);
-                        OutputDebugStringA(buffer);
-                        OutputDebugStringA(buffer2);
-
                         SoundOutput.ToneHz = 512 + (int)(256.0f*((real32)StickY / 30000.0f));
                         SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond/SoundOutput.ToneHz;
                         
@@ -475,6 +478,26 @@ int CALLBACK WinMain(
                 win32_window_dimension WindowDimension = GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackBuffer, DeviceContext, WindowDimension.Width, WindowDimension.Height);
                 ReleaseDC(Window, DeviceContext);
+
+                LARGE_INTEGER EndCounter;
+                QueryPerformanceCounter(&EndCounter);
+
+                int64 EndCycleCount = __rdtsc();
+
+                //Display counter
+
+                int64 CyclesElapsed = EndCycleCount - LastCycleCount;
+                int64 CounterElapse = EndCounter.QuadPart - LastCounter.QuadPart;
+                int32  MSPerFrame = ((1000 * CounterElapse) / PerfCountFrequency);
+                int32 FPS = PerfCountFrequency / CounterElapse;
+                int32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
+
+                char Buffer[256];
+                wsprintfA(Buffer, "%dms/f, %df/s, %dmc/f\n", MSPerFrame, FPS, MCPF);
+                OutputDebugStringA(Buffer);
+
+                LastCounter = EndCounter;
+                LastCycleCount = EndCycleCount;
             }
         } else {
 
