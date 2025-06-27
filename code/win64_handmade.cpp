@@ -390,7 +390,7 @@ int CALLBACK WinMain(
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
 
-            int64 LastCycleCount = __rdtsc();
+            uint64 LastCycleCount = __rdtsc();
 
             while(GlobalRunning) {
                 MSG Message;
@@ -482,7 +482,7 @@ int CALLBACK WinMain(
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
 
-                int64 EndCycleCount = __rdtsc();
+                uint64 EndCycleCount = __rdtsc();
 
                 //Display counter
 
