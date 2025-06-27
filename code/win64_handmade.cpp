@@ -486,11 +486,11 @@ int CALLBACK WinMain(
 
                 //Display counter
 
-                int64 CyclesElapsed = EndCycleCount - LastCycleCount;
+                uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64 CounterElapse = EndCounter.QuadPart - LastCounter.QuadPart;
-                int32  MSPerFrame = ((1000 * CounterElapse) / PerfCountFrequency);
-                int32 FPS = PerfCountFrequency / CounterElapse;
-                int32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
+                real32  MSPerFrame = ((1000.0f * (real32)CounterElapse) / (real32)PerfCountFrequency);
+                real32 FPS = (real32)PerfCountFrequency / (real32)CounterElapse;
+                real32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
 
                 char Buffer[256];
                 wsprintfA(Buffer, "%dms/f, %df/s, %dmc/f\n", MSPerFrame, FPS, MCPF);
