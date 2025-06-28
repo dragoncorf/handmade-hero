@@ -296,7 +296,7 @@ struct win32_sound_output {
     int LatencySampleCount;
 };
 
-void Win32FillSoundBuffer (win32_sound_output *SoundOutput, DWORD BytesToLock, DWORD BytesToWrite) {
+void Win32FillSoundBuffer(win32_sound_output *SoundOutput, DWORD BytesToLock, DWORD BytesToWrite) {
     VOID *Region1;
     DWORD Region1Size;
     VOID *Region2;
@@ -379,7 +379,7 @@ int CALLBACK WinMain(
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
             SoundOutput.BytesPerSample = sizeof(int16) * 2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
-            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 15;
+            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 10;
 
             Win32InitSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
@@ -493,7 +493,7 @@ int CALLBACK WinMain(
                 real32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
 
                 char Buffer[256];
-                wsprintfA(Buffer, "%dms/f, %df/s, %dmc/f\n", MSPerFrame, FPS, MCPF);
+                sprintf(Buffer, "ms/f: %.2f,  fps: %.2f,  mc/f: %.2f\n", MSPerFrame, FPS, MCPF);
                 OutputDebugStringA(Buffer);
 
                 LastCounter = EndCounter;
