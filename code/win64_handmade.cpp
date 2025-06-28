@@ -4,6 +4,7 @@
 #include <dsound.h>
 #include <math.h>
 #include <stdio.h>
+#include "handmade.h"
 
 #define internal static 
 #define local_persist static 
@@ -24,6 +25,8 @@ typedef uint64_t uint64;
 
 typedef float real32;
 typedef double real64;
+
+#include "handmade.cpp"
 
 struct win32_offscreen_buffer{
     BITMAPINFO Info;
@@ -78,6 +81,10 @@ internal void Win32LoadXInput(void) {
 
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuiDevice, LPDIRECTSOUND *ppDS, _Pre_null_ LPUNKNOWN pUnkOuter);
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+void *PlatformLoadFile(char *Filename) {
+    return 0;
+}
 
 internal void Win32InitSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize) {
     // Load the library
@@ -379,7 +386,7 @@ int CALLBACK WinMain(
             SoundOutput.WavePeriod = SoundOutput.SamplesPerSecond / SoundOutput.ToneHz;
             SoundOutput.BytesPerSample = sizeof(int16) * 2;
             SoundOutput.SecondaryBufferSize = SoundOutput.SamplesPerSecond * SoundOutput.BytesPerSample;
-            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 10;
+            SoundOutput.LatencySampleCount = SoundOutput.SamplesPerSecond / 20;
 
             Win32InitSound(Window, SoundOutput.SamplesPerSecond, SoundOutput.SecondaryBufferSize);
             Win32FillSoundBuffer(&SoundOutput, 0, SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample);
@@ -484,6 +491,7 @@ int CALLBACK WinMain(
 
                 uint64 EndCycleCount = __rdtsc();
 
+                MainLoop();
                 //Display counter
 
                 uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
