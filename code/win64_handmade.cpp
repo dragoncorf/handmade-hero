@@ -1,32 +1,12 @@
-#include <windows.h>
-#include <stdint.h>
-#include <xinput.h>
-#include <dsound.h>
+#include "general.h"
 #include <math.h>
-#include <stdio.h>
-#include "handmade.h"
-
-#define internal static 
-#define local_persist static 
-#define global_variable static 
-#define Pi32 3.1415926535f
-#define WrapColor(Value) ((uint8)(((Value) % 256 + 256) % 256))
-
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef int32 bool32;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef float real32;
-typedef double real64;
 
 #include "handmade.cpp"
+
+#include <windows.h>
+#include <xinput.h>
+#include <dsound.h>
+#include <stdio.h>
 
 struct win32_offscreen_buffer{
     BITMAPINFO Info;
@@ -145,28 +125,6 @@ internal win32_window_dimension GetWindowDimension(HWND Window) {
     Result.Width = ClientRect.right - ClientRect.left;
     Result.Height = ClientRect.bottom - ClientRect.top;
     return Result;
-}
-
-internal void RenderWeirdGradient(win32_offscreen_buffer *Buffer, int XOffset, int YOffset) {
-    uint8 *Row = (uint8 *)Buffer->Memory;
-    
-    for(int Y=0; Y < Buffer->Height; ++Y){
-        uint32 *Pixel = (uint32 *)Row;
-        
-        for(int X = 0; X < Buffer->Width; ++X) {
-            int Blue = (X + XOffset);
-            int Green = (Y + YOffset);
-            int Red = (X + YOffset);
-
-            uint8 FinalBlue = WrapColor(Blue);
-            uint8 FinalGreen = WrapColor(Green);
-            uint8 FinalRed = WrapColor(Red);
-
-            *Pixel++ = (FinalRed << 16) | (FinalGreen << 8) | FinalBlue;
-        }
-
-        Row += Buffer->Pitch;
-    }
 }
 
 internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height) {
@@ -460,8 +418,12 @@ int CALLBACK WinMain(
                 // Vibration.wLeftMotorSpeed = 0;
                 // Vibration.wRightMotorSpeed = 0;
                 // XInputSetState(0, &Vibration);
-
-                RenderWeirdGradient(&GlobalBackBuffer, XOffset, YOffset);
+                game_offscreen_buffer Buffer = {};
+                Buffer.Memory = GlobalBackBuffer.Memory;
+                Buffer.Width = GlobalBackBuffer.Width;
+                Buffer.Height = GlobalBackBuffer.Height;
+                Buffer.Pitch = GlobalBackBuffer.Pitch;
+                GameUpdateAndRender(&Buffer, XOffset, YOffset);
                 
                 DWORD PlayCursor;
                 DWORD WriteCursor;
@@ -491,18 +453,15 @@ int CALLBACK WinMain(
 
                 uint64 EndCycleCount = __rdtsc();
 
-                MainLoop();
-                //Display counter
-
                 uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64 CounterElapse = EndCounter.QuadPart - LastCounter.QuadPart;
                 real32  MSPerFrame = ((1000.0f * (real32)CounterElapse) / (real32)PerfCountFrequency);
                 real32 FPS = (real32)PerfCountFrequency / (real32)CounterElapse;
                 real32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
 
-                char Buffer[256];
-                sprintf(Buffer, "ms/f: %.2f,  fps: %.2f,  mc/f: %.2f\n", MSPerFrame, FPS, MCPF);
-                OutputDebugStringA(Buffer);
+                char StatsBuffer[256];
+                sprintf(StatsBuffer, "ms/f: %.2f,  fps: %.2f,  mc/f: %.2f\n", MSPerFrame, FPS, MCPF);
+                OutputDebugStringA(StatsBuffer);
 
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
